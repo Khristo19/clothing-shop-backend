@@ -11,6 +11,7 @@ module.exports = async (req, res) => {
 
     try {
         const userRes = await pool.query('SELECT * FROM users WHERE email = $1', [email]);
+
         if (userRes.rows.length === 0) {
             return res.status(401).json({ message: 'Invalid email or password' });
         }
