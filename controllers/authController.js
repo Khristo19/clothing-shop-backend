@@ -5,31 +5,35 @@ const pool = require('../db');
 const registerUser = async (req, res) => {
     const { email, password, role } = req.body;
 
+    console.log('📥 Incoming registration:', { email, role });
+
     if (!email || !password || !role) {
+        console.warn('⚠️ Missing input fields:', { email, password, role });
         return res.status(400).json({ message: 'Email, password, and role are required' });
     }
 
     try {
-        console.log('🔍 Checking if user exists...');
+        console.log('🔍 Checking if user already exists...');
         const userExists = await pool.query('SELECT * FROM users WHERE email = $1', [email]);
 
         if (userExists.rows.length > 0) {
+            console.log('🚫 User already exists:', email);
             return res.status(409).json({ message: 'User already exists' });
         }
 
-        console.log('🔑 Hashing password...');
+        console.log('🔐 Hashing password...');
         const hashedPassword = await bcrypt.hash(password, 10);
 
-        console.log('📦 Inserting new user into database...');
+        console.log('📦 Inserting user into DB...');
         const newUser = await pool.query(
             'INSERT INTO users (email, password, role) VALUES ($1, $2, $3) RETURNING id, email, role',
             [email, hashedPassword, role]
         );
 
-        console.log('✅ User created successfully:', newUser.rows[0]);
+        console.log('✅ User successfully registered:', newUser.rows[0]);
         res.status(201).json({ user: newUser.rows[0] });
     } catch (error) {
-        console.error('❌ Register error:', error);
+        console.error('❌ Register error:', error.message, '\nStack:', error.stack);
         res.status(500).json({ message: 'Server error during registration' });
     }
 };
@@ -38,8 +42,11 @@ const loginUser = async (req, res) => {
     const { email, password } = req.body;
 
     try {
+        console.log('🔑 Login attempt for:', email);
+
         const userRes = await pool.query('SELECT * FROM users WHERE email = $1', [email]);
         if (userRes.rows.length === 0) {
+            console.warn('⚠️ No user found:', email);
             return res.status(401).json({ message: 'Invalid email or password' });
         }
 
@@ -47,6 +54,7 @@ const loginUser = async (req, res) => {
         const match = await bcrypt.compare(password, user.password);
 
         if (!match) {
+            console.warn('⚠️ Incorrect password for:', email);
             return res.status(401).json({ message: 'Invalid email or password' });
         }
 
@@ -56,9 +64,10 @@ const loginUser = async (req, res) => {
             { expiresIn: '12h' }
         );
 
+        console.log('✅ Login successful for:', email);
         res.json({ token, user: { id: user.id, email: user.email, role: user.role } });
     } catch (error) {
-        console.error('Login error:', error);
+        console.error('❌ Login error:', error.message, '\nStack:', error.stack);
         res.status(500).json({ message: 'Server error during login' });
     }
 };
