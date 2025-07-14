@@ -1,4 +1,5 @@
 const pool = require('../../db');
+const {verifyToken, checkRole} = require("../../utils/auth");
 
 module.exports = async (req, res) => {
     if (req.method !== 'PUT') {
@@ -12,6 +13,9 @@ module.exports = async (req, res) => {
     }
 
     try {
+        const user = verifyToken(req);
+        checkRole(user, ['admin']);
+
         const result = await pool.query(
             `UPDATE offers
              SET status = $1, updated_at = NOW()

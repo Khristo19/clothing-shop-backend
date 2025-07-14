@@ -1,0 +1,190 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "title": "Clothing Shop Backend API",
+    "version": "1.0.0",
+    "description": "API documentation for the Clothing Shop backend running on Vercel"
+  },
+  "paths": {
+    "/api/auth/login.js": {
+      "post": {
+        "summary": "Login",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "email": { "type": "string" },
+                  "password": { "type": "string" }
+                },
+                "required": ["email", "password"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Login successful"
+          },
+          "401": {
+            "description": "Invalid credentials"
+          }
+        }
+      }
+    },
+    "/api/auth/register.js": {
+      "post": {
+        "summary": "Register a new user",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "email": { "type": "string" },
+                  "password": { "type": "string" },
+                  "role": { "type": "string" }
+                },
+                "required": ["email", "password", "role"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "User created"
+          }
+        }
+      }
+    },
+    "/api/items/add.js": {
+      "post": {
+        "summary": "Add a new item",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "name": { "type": "string" },
+                  "description": { "type": "string" },
+                  "price": { "type": "number" },
+                  "quantity": { "type": "integer" },
+                  "image_url": { "type": "string" }
+                },
+                "required": ["name", "price", "quantity"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Item created"
+          }
+        }
+      }
+    },
+    "/api/items/list.js": {
+      "get": {
+        "summary": "Get all items",
+        "responses": {
+          "200": {
+            "description": "Array of items"
+          }
+        }
+      }
+    },
+    "/api/sales/history.js": {
+      "get": {
+        "summary": "Get sales history",
+        "responses": {
+          "200": {
+            "description": "Array of sales records"
+          }
+        }
+      }
+    },
+    "/api/offers/create.js": {
+      "post": {
+        "summary": "Create a new offer",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "from_shop": { "type": "string" },
+                  "items": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "id": { "type": "integer" },
+                        "qty": { "type": "integer" }
+                      }
+                    }
+                  },
+                  "requested_discount": {
+                    "type": "object",
+                    "properties": {
+                      "total": { "type": "number" },
+                      "item_discounts": {
+                        "type": "array",
+                        "items": {
+                          "type": "object",
+                          "properties": {
+                            "item_id": { "type": "integer" },
+                            "discount": { "type": "number" }
+                          }
+                        }
+                      }
+                    }
+                  }
+                },
+                "required": ["from_shop", "items"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Offer created"
+          }
+        }
+      }
+    },
+    "/api/offers/approve.js": {
+      "put": {
+        "summary": "Approve or reject an offer",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "offer_id": { "type": "integer" },
+                  "status": {
+                    "type": "string",
+                    "enum": ["approved", "rejected"]
+                  }
+                },
+                "required": ["offer_id", "status"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Offer status updated"
+          }
+        }
+      }
+    }
+  }
+}

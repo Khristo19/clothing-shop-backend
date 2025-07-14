@@ -1,11 +1,13 @@
 const pool = require('../../db');
+const { verifyToken, checkRole } = require('../../utils/auth');
 
 module.exports = async (req, res) => {
-    if (req.method !== 'GET') {
-        return res.status(405).json({ message: 'Method Not Allowed' });
-    }
+    if (req.method !== 'GET') return res.status(405).json({ message: 'Method Not Allowed' });
 
     try {
+        const user = verifyToken(req);
+        checkRole(user, ['admin']);
+
         const result = await pool.query(`
       SELECT s.id, s.total, s.payment_method, s.created_at, s.items, u.email AS cashier_email
       FROM sales s
@@ -14,8 +16,8 @@ module.exports = async (req, res) => {
     `);
 
         res.status(200).json(result.rows);
-    } catch (error) {
-        console.error('[SALES HISTORY ERROR]', error.message);
-        res.status(500).json({ message: 'Server error fetching sales history' });
+    } catch (err) {
+        console.error('[SALES HISTORY ERROR]', err.message);
+        res.status(403).json({ message: err.message });
     }
 };
