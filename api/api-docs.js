@@ -2,7 +2,7 @@ const fs = require('fs');
 const path = require('path');
 
 module.exports = async (req, res) => {
-    const filePath = path.join(__dirname, '../../swagger.json');
+    const filePath = path.resolve('./swagger.json');
 
     try {
         const swaggerData = fs.readFileSync(filePath, 'utf-8');
@@ -30,6 +30,6 @@ module.exports = async (req, res) => {
         res.status(200).send(html);
     } catch (err) {
         console.error('[SWAGGER UI ERROR]', err.message);
-        res.status(500).json({ message: 'Could not load Swagger UI' });
+        res.status(500).json({ message: 'Failed to load Swagger UI' });
     }
 };
