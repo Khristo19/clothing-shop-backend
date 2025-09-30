@@ -20,6 +20,11 @@ module.exports = async (req, res) => {
         return res.status(400).json({ message: 'Missing required fields' });
     }
 
+    const rawMethod = String(payment_method);
+    const isCard = rawMethod.startsWith('card');
+    const bank = isCard && rawMethod.includes('-') ? rawMethod.split('-')[1]?.toUpperCase() : null;
+    const normalizedMethod = isCard ? 'card' : rawMethod;
+
     try {
         const user = verifyToken(req);
         checkRole(user, ['admin', 'cashier']);
@@ -52,11 +57,11 @@ module.exports = async (req, res) => {
                 `INSERT INTO sales (cashier_id, items, total, payment_method, created_at)
                  VALUES ($1, $2, $3, $4, NOW())
                  RETURNING *`,
-                [user.id, JSON.stringify(items), total, payment_method]
+                [user.id, JSON.stringify(items), total, normalizedMethod]
             );
 
             await client.query('COMMIT');
-            res.status(201).json(result.rows[0]);
+            res.status(201).json({ ...result.rows[0], payment_bank: bank });
         } catch (error) {
             await client.query('ROLLBACK');
             console.error('[CART ERROR]', error.message);
