@@ -2,13 +2,21 @@ const pool = require('../../db');
 const { verifyToken, checkRole } = require('../../utils/auth');
 
 module.exports = async (req, res) => {
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With, Accept, Origin');
+
+    if (req.method === 'OPTIONS') {
+        return res.status(200).end();
+    }
+
     if (req.method !== 'POST') {
         return res.status(405).json({ message: 'Method Not Allowed' });
     }
 
-    const { items, total, payment_method } = req.body;
+    const { items, total, payment_method } = req.body || {};
 
-    if (!items || !Array.isArray(items) || !total || !payment_method) {
+    if (!items || !Array.isArray(items) || typeof total !== 'number' || !payment_method) {
         return res.status(400).json({ message: 'Missing required fields' });
     }
 
