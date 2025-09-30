@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const authController = require('../controllers/authController');
+const { authenticateToken } = require('../middleware/authMiddleware');
 
 /**
  * @swagger
@@ -67,5 +68,27 @@ router.post('/register', authController.registerUser);
 
 // POST /login
 router.post('/login', authController.loginUser);
+
+/**
+ * @swagger
+ * /api/auth/me:
+ *   get:
+ *     summary: Get current authenticated user
+ *     tags: [Auth]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Current user
+ *       401:
+ *         description: Unauthorized
+ */
+
+// GET /me
+router.get('/me', authenticateToken, (req, res) => {
+  const { id, role } = req.user || {};
+  if (!id) return res.status(401).json({ message: 'Unauthorized' });
+  res.json({ id, role });
+});
 
 module.exports = router;
