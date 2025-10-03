@@ -67,7 +67,7 @@ router.post('/', authenticateToken, authorizeRoles('cashier', 'admin'), async (r
             ]
         );
 
-        res.status(201).json({ offer: result.rows[0] });
+        res.status(201).json(result.rows[0]);
     } catch (err) {
         console.error('Offer creation error:', err);
         res.status(500).json({ message: 'Failed to create offer' });
@@ -96,7 +96,7 @@ router.get('/', authenticateToken, authorizeRoles('admin'), async (req, res) => 
         const result = await pool.query(
             `SELECT * FROM offers ORDER BY created_at DESC`
         );
-        res.json({ offers: result.rows });
+        res.json(result.rows);
     } catch (err) {
         console.error('Fetch offers error:', err);
         res.status(500).json({ message: 'Failed to fetch offers' });
@@ -141,9 +141,12 @@ router.get('/', authenticateToken, authorizeRoles('admin'), async (req, res) => 
 
 
 // ✅ Approve or reject an offer
-router.put('/:id', authenticateToken, authorizeRoles('admin'), async (req, res) => {
-    const { id } = req.params;
-    const { status } = req.body;
+router.put('/status', authenticateToken, authorizeRoles('admin'), async (req, res) => {
+    const { offer_id, status } = req.body;
+
+    if (!offer_id) {
+        return res.status(400).json({ message: 'Offer ID is required' });
+    }
 
     if (!['approved', 'rejected'].includes(status)) {
         return res.status(400).json({ message: 'Invalid status' });
@@ -156,14 +159,14 @@ router.put('/:id', authenticateToken, authorizeRoles('admin'), async (req, res) 
                  updated_at = CURRENT_TIMESTAMP
              WHERE id = $2
                  RETURNING *`,
-            [status, id]
+            [status, offer_id]
         );
 
         if (result.rows.length === 0) {
             return res.status(404).json({ message: 'Offer not found' });
         }
 
-        res.json({ offer: result.rows[0] });
+        res.json(result.rows[0]);
     } catch (err) {
         console.error('Update offer error:', err);
         res.status(500).json({ message: 'Failed to update offer' });

@@ -45,11 +45,17 @@ const authRoutes = require('./routes/auth.routes');
 const itemRoutes = require('./routes/item.routes');
 const saleRoutes = require('./routes/sales.routes');
 const offerRoutes = require('./routes/offer.routes');
+const userRoutes = require('./routes/user.routes');
+const reportRoutes = require('./routes/report.routes');
+const settingsRoutes = require('./routes/settings.routes');
 
 app.use('/api/auth', authRoutes);
 app.use('/api/items', itemRoutes);
 app.use('/api/sales', saleRoutes);
 app.use('/api/offers', offerRoutes);
+app.use('/api/users', userRoutes);
+app.use('/api/reports', reportRoutes);
+app.use('/api/settings', settingsRoutes);
 
 // Start server
 const PORT = process.env.PORT || 4000;

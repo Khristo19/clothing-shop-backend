@@ -33,11 +33,7 @@ module.exports = async (req, res) => {
             return res.status(401).json({ message: 'Invalid email or password' });
         }
 
-        const token = jwt.sign(
-            { id: user.id, role: user.role },
-            process.env.JWT_SECRET,
-            { expiresIn: '12h' }
-        );
+        const token = jwt.sign(\r\n            { id: user.id, role: user.role },\r\n            process.env.JWT_SECRET\r\n        );
 
         res.status(200).json({ token, user: { id: user.id, email: user.email, role: user.role } });
     } catch (error) {
@@ -45,4 +41,5 @@ module.exports = async (req, res) => {
         res.status(500).json({ message: 'Server error during login' });
     }
 };
+
 

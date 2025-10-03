@@ -83,10 +83,79 @@ router.post('/add', authenticateToken, authorizeRoles('admin'), async (req, res)
 router.get('/', authenticateToken, authorizeRoles('admin', 'cashier'), async (req, res) => {
     try {
         const result = await pool.query('SELECT * FROM items ORDER BY created_at DESC');
-        res.json({ items: result.rows });
+        res.json(result.rows);
     } catch (error) {
         console.error('Fetch items error:', error);
         res.status(500).json({ message: 'Failed to fetch items' });
+    }
+});
+
+// 📝 PUT /api/items/:id (admin only)
+router.put('/:id', authenticateToken, authorizeRoles('admin'), async (req, res) => {
+    const { id } = req.params;
+    const { name, description, price, quantity, image_url } = req.body;
+
+    try {
+        const updates = [];
+        const values = [];
+        let paramCount = 1;
+
+        if (name !== undefined) {
+            updates.push(`name = $${paramCount++}`);
+            values.push(name);
+        }
+        if (description !== undefined) {
+            updates.push(`description = $${paramCount++}`);
+            values.push(description);
+        }
+        if (price !== undefined) {
+            updates.push(`price = $${paramCount++}`);
+            values.push(price);
+        }
+        if (quantity !== undefined) {
+            updates.push(`quantity = $${paramCount++}`);
+            values.push(quantity);
+        }
+        if (image_url !== undefined) {
+            updates.push(`image_url = $${paramCount++}`);
+            values.push(image_url);
+        }
+
+        if (updates.length === 0) {
+            return res.status(400).json({ message: 'No fields to update' });
+        }
+
+        values.push(id);
+        const query = `UPDATE items SET ${updates.join(', ')} WHERE id = $${paramCount} RETURNING *`;
+
+        const result = await pool.query(query, values);
+
+        if (result.rows.length === 0) {
+            return res.status(404).json({ message: 'Item not found' });
+        }
+
+        res.json(result.rows[0]);
+    } catch (error) {
+        console.error('Update item error:', error);
+        res.status(500).json({ message: 'Failed to update item' });
+    }
+});
+
+// 🗑️ DELETE /api/items/:id (admin only)
+router.delete('/:id', authenticateToken, authorizeRoles('admin'), async (req, res) => {
+    const { id } = req.params;
+
+    try {
+        const result = await pool.query('DELETE FROM items WHERE id = $1 RETURNING *', [id]);
+
+        if (result.rows.length === 0) {
+            return res.status(404).json({ message: 'Item not found' });
+        }
+
+        res.json({ message: 'Item deleted successfully', item: result.rows[0] });
+    } catch (error) {
+        console.error('Delete item error:', error);
+        res.status(500).json({ message: 'Failed to delete item' });
     }
 });
 
