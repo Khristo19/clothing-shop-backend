@@ -1,32 +1,65 @@
-const pool = require('../../db');
-const { verifyToken, checkRole } = require('../../utils/auth');
+const pool = require('../db');
+const { verifyToken, checkRole } = require('../utils/auth');
 
 module.exports = async (req, res) => {
     res.setHeader('Access-Control-Allow-Origin', '*');
-    res.setHeader('Access-Control-Allow-Methods', 'PUT, OPTIONS');
+    res.setHeader('Access-Control-Allow-Methods', 'GET, PUT, OPTIONS');
     res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With, Accept, Origin');
 
     if (req.method === 'OPTIONS') {
         return res.status(200).end();
     }
 
-    if (req.method !== 'PUT') {
-        return res.status(405).json({ message: 'Method Not Allowed' });
-    }
-
     try {
         const user = verifyToken(req);
         checkRole(user, ['admin']);
 
-        const { shop_name, tax_rate, currency, receipt_header, receipt_footer } = req.body;
+        if (req.method === 'GET') {
+            return await getSettings(req, res);
+        } else if (req.method === 'PUT') {
+            return await updateSettings(req, res);
+        } else {
+            return res.status(405).json({ message: 'Method not allowed' });
+        }
+    } catch (error) {
+        console.error('[SETTINGS ERROR]', error.message);
+        const status = error.message?.startsWith('Unauthorized') ? 403 : 500;
+        res.status(status).json({ message: error.message || 'Server error' });
+    }
+};
 
-        // Check if settings exist
+// GET SETTINGS
+async function getSettings(req, res) {
+    try {
+        const result = await pool.query('SELECT * FROM settings ORDER BY id DESC LIMIT 1');
+
+        if (result.rows.length === 0) {
+            return res.status(200).json({
+                shop_name: 'Clothing Shop',
+                tax_rate: 0,
+                currency: 'GEL',
+                receipt_header: 'Thank you for shopping with us!',
+                receipt_footer: 'Please come again'
+            });
+        }
+
+        res.status(200).json(result.rows[0]);
+    } catch (error) {
+        console.error('[FETCH SETTINGS ERROR]', error.message);
+        res.status(500).json({ message: 'Server error fetching settings' });
+    }
+}
+
+// UPDATE SETTINGS
+async function updateSettings(req, res) {
+    const { shop_name, tax_rate, currency, receipt_header, receipt_footer } = req.body;
+
+    try {
         const existing = await pool.query('SELECT id FROM settings ORDER BY id DESC LIMIT 1');
 
         let result;
 
         if (existing.rows.length === 0) {
-            // Insert new settings
             result = await pool.query(`
                 INSERT INTO settings (shop_name, tax_rate, currency, receipt_header, receipt_footer)
                 VALUES ($1, $2, $3, $4, $5)
@@ -39,7 +72,6 @@ module.exports = async (req, res) => {
                 receipt_footer || 'Please come again'
             ]);
         } else {
-            // Update existing settings
             const updates = [];
             const values = [];
             let paramCount = 1;
@@ -79,7 +111,6 @@ module.exports = async (req, res) => {
         res.status(200).json(result.rows[0]);
     } catch (error) {
         console.error('[UPDATE SETTINGS ERROR]', error.message);
-        const status = error.message?.startsWith('Unauthorized') ? 403 : 500;
-        res.status(status).json({ message: error.message || 'Server error updating settings' });
+        res.status(500).json({ message: 'Server error updating settings' });
     }
-};
+}
