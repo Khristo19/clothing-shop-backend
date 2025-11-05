@@ -18,11 +18,14 @@ module.exports = async (req, res) => {
         const user = verifyToken(req);
         checkRole(user, ['admin']);
 
-        const result = await pool.query('SELECT * FROM offers ORDER BY created_at DESC');
+        const result = await pool.query(
+            'SELECT id, email, role, created_at FROM users ORDER BY created_at DESC'
+        );
 
         res.status(200).json(result.rows);
     } catch (error) {
-        console.error('[OFFERS LIST ERROR]', error.message);
-        res.status(403).json({ message: error.message });
+        console.error('[FETCH USERS ERROR]', error.message);
+        const status = error.message?.startsWith('Unauthorized') ? 403 : 500;
+        res.status(status).json({ message: error.message || 'Server error fetching users' });
     }
 };
