@@ -39,22 +39,22 @@ module.exports = async (req, res) => {
                 }
 
                 const update = await client.query(
-                    UPDATE items
-                     SET quantity = quantity - 
-                     WHERE id =  AND quantity >= 
-                     RETURNING id,
+                    `UPDATE items
+                     SET quantity = quantity - $1
+                     WHERE id = $2 AND quantity >= $1
+                     RETURNING id`,
                     [qty, id]
                 );
 
                 if (update.rowCount === 0) {
-                    throw new Error(Insufficient stock for item );
+                    throw new Error(`Insufficient stock for item ${id}`);
                 }
             }
 
             const result = await client.query(
-                INSERT INTO sales (cashier_id, items, total, payment_method, created_at)
-                 VALUES (, , , , NOW())
-                 RETURNING *,
+                `INSERT INTO sales (cashier_id, items, total, payment_method, created_at)
+                 VALUES ($1, $2, $3, $4, NOW())
+                 RETURNING *`,
                 [user.id, JSON.stringify(items), total, normalizedMethod]
             );
 
