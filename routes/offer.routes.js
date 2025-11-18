@@ -78,7 +78,7 @@ router.post('/', authenticateToken, authorizeRoles('cashier', 'admin'), async (r
  * @swagger
  * /api/offers:
  *   get:
- *     summary: Get all submitted offers (admin only)
+ *     summary: Get all submitted offers (admin + cashier)
  *     tags: [Offers]
  *     security:
  *       - bearerAuth: []
@@ -91,7 +91,7 @@ router.post('/', authenticateToken, authorizeRoles('cashier', 'admin'), async (r
 
 
 // 📥 Get all offers
-router.get('/', authenticateToken, authorizeRoles('admin'), async (req, res) => {
+router.get('/', authenticateToken, authorizeRoles('admin', 'cashier'), async (req, res) => {
     try {
         const result = await pool.query(
             `SELECT * FROM offers ORDER BY created_at DESC`
