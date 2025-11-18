@@ -2,130 +2,14 @@
     "version": 2,
     "builds": [
         {
-            "src": "api/**/*.js",
+            "src": "server.js",
             "use": "@vercel/node"
         }
     ],
     "routes": [
         {
-            "src": "/api-docs",
-            "dest": "/api/api-docs.js"
-        },
-        {
-            "src": "/api/auth/register",
-            "dest": "/api/auth/register.js"
-        },
-        {
-            "src": "/api/auth/login",
-            "dest": "/api/auth/login.js"
-        },
-        {
-            "src": "/api/auth/me",
-            "dest": "/api/auth/me.js"
-        },
-        {
-            "src": "/api/items/add",
-            "dest": "/api/items/add.js"
-        },
-        {
-            "src": "/api/items/list",
-            "dest": "/api/items/list.js"
-        },
-        {
-            "src": "/api/items/update",
-            "dest": "/api/items/update.js"
-        },
-        {
-            "src": "/api/items/delete",
-            "dest": "/api/items/delete.js"
-        },
-        {
-            "src": "/api/items",
-            "dest": "/api/items/list.js"
-        },
-        {
-            "src": "/api/sales/cart",
-            "dest": "/api/sales/cart.js"
-        },
-        {
-            "src": "/api/sales/history",
-            "dest": "/api/sales/history.js"
-        },
-        {
-            "src": "/api/sales/details",
-            "dest": "/api/sales/details.js"
-        },
-        {
-            "src": "/api/sales",
-            "dest": "/api/sales/history.js"
-        },
-        {
-            "src": "/api/offers/create",
-            "dest": "/api/offers/create.js"
-        },
-        {
-            "src": "/api/offers/approve",
-            "dest": "/api/offers/approve.js"
-        },
-        {
-            "src": "/api/offers/list",
-            "dest": "/api/offers/list.js"
-        },
-        {
-            "src": "/api/offers",
-            "dest": "/api/offers/list.js"
-        },
-        {
-            "src": "/api/users/list",
-            "dest": "/api/users/list.js"
-        },
-        {
-            "src": "/api/users/create",
-            "dest": "/api/users/create.js"
-        },
-        {
-            "src": "/api/users/update",
-            "dest": "/api/users/update.js"
-        },
-        {
-            "src": "/api/users/delete",
-            "dest": "/api/users/delete.js"
-        },
-        {
-            "src": "/api/users",
-            "dest": "/api/users/list.js"
-        },
-        {
-            "src": "/api/settings/get",
-            "dest": "/api/settings/get.js"
-        },
-        {
-            "src": "/api/settings/update",
-            "dest": "/api/settings/update.js"
-        },
-        {
-            "src": "/api/settings",
-            "dest": "/api/settings/get.js"
-        },
-        {
-            "src": "/api/reports/dashboard",
-            "dest": "/api/reports/dashboard.js"
-        },
-        {
-            "src": "/api/reports/sales",
-            "dest": "/api/reports/sales.js"
-        },
-        {
-            "src": "/api/reports/top-products",
-            "dest": "/api/reports/top-products.js"
-        },
-        {
-            "src": "/api/reports/cashier-performance",
-            "dest": "/api/reports/cashier-performance.js"
-        },
-        {
-            "src": "/api/reports/export-csv",
-            "dest": "/api/reports/export-csv.js"
+            "src": "/(.*)",
+            "dest": "/server.js"
         }
     ]
 }
