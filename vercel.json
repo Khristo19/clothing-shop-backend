@@ -16,14 +16,8 @@
         }
     ],
     "functions": {
-        "api/**/*.js": {
-            "maxDuration": 10
-        },
         "server.js": {
             "maxDuration": 10
         }
-    },
-    "api": {
-        "bodyParser": false
     }
 }
