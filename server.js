@@ -37,35 +37,35 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 // Handle preflight requests
 app.options('*', cors());
 
-// ✅ Swagger setup BEFORE defining routes
-const options = {
-    definition: {
-        openapi: '3.0.0',
-        info: {
-            title: 'Clothing Shop API',
-            version: '1.0.0',
-        },
-        components: {
-            securitySchemes: {
-                bearerAuth: {
-                    type: 'http',
-                    scheme: 'bearer',
-                    bearerFormat: 'JWT',
+// ✅ Swagger setup - only in development to improve serverless performance
+if (process.env.NODE_ENV !== 'production') {
+    const options = {
+        definition: {
+            openapi: '3.0.0',
+            info: {
+                title: 'Clothing Shop API',
+                version: '1.0.0',
+            },
+            components: {
+                securitySchemes: {
+                    bearerAuth: {
+                        type: 'http',
+                        scheme: 'bearer',
+                        bearerFormat: 'JWT',
+                    }
                 }
-            }
+            },
+            security: [
+                {
+                    bearerAuth: []
+                }
+            ]
         },
-        security: [
-            {
-                bearerAuth: []
-            }
-        ]
-    },
-    apis: [path.join(__dirname, 'routes', '*.js')],
-};
-
-
-const swaggerSpec = swaggerJsdoc(options);
-app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
+        apis: [path.join(__dirname, 'routes', '*.js')],
+    };
+    const swaggerSpec = swaggerJsdoc(options);
+    app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
+}
 
 // ✅ Now define routes AFTER Swagger is set
 const authRoutes = require('./routes/auth.routes');

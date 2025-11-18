@@ -1,5 +1,9 @@
 const { Pool } = require('pg');
 
+if (!process.env.DATABASE_URL) {
+    throw new Error('DATABASE_URL environment variable is not set');
+}
+
 const pool = new Pool({
     connectionString: process.env.DATABASE_URL,
     ssl: {
@@ -8,5 +12,3 @@ const pool = new Pool({
 });
 
 module.exports = pool;
-
-console.log('[DB INIT] DATABASE_URL =', process.env.DATABASE_URL);
