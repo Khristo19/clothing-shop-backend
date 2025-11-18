@@ -3,7 +3,7 @@ const router = express.Router();
 const { authenticateToken, authorizeRoles } = require('../middleware/authMiddleware');
 const pool = require('../db');
 const upload = require('../middleware/uploadMiddleware');
-const supabase = require('../config/supabase');
+const getSupabaseClient = require('../config/supabase');
 
 /**
  * @swagger
@@ -59,6 +59,9 @@ router.post('/add', authenticateToken, authorizeRoles('admin'), upload.single('i
             const fileExt = req.file.originalname.split('.').pop();
             const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
             const filePath = `items/${fileName}`;
+
+            // Get Supabase client (will throw error if not configured)
+            const supabase = getSupabaseClient();
 
             // Upload to Supabase Storage
             const { data, error } = await supabase.storage
@@ -153,6 +156,9 @@ router.put('/:id', authenticateToken, authorizeRoles('admin'), upload.single('im
             const fileExt = req.file.originalname.split('.').pop();
             const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
             const filePath = `items/${fileName}`;
+
+            // Get Supabase client (will throw error if not configured)
+            const supabase = getSupabaseClient();
 
             // Upload to Supabase Storage
             const { data, error } = await supabase.storage
