@@ -41,6 +41,9 @@ const pool = require('../db');
  *                     enum: [percentage, manual]
  *                   value:
  *                     type: number
+ *               payment_method:
+ *                 type: string
+ *                 enum: [cash, BOG, TBC]
  *     responses:
  *       201:
  *         description: Offer successfully created
@@ -49,7 +52,7 @@ const pool = require('../db');
 
 // 📤 Create an offer
 router.post('/', authenticateToken, authorizeRoles('cashier', 'admin'), async (req, res) => {
-    const { from_shop, items, requested_discount } = req.body;
+    const { from_shop, items, requested_discount, payment_method } = req.body;
 
     if (!from_shop || !items) {
         return res.status(400).json({ message: 'Missing offer data' });
@@ -57,13 +60,14 @@ router.post('/', authenticateToken, authorizeRoles('cashier', 'admin'), async (r
 
     try {
         const result = await pool.query(
-            `INSERT INTO offers (from_shop, items, requested_discount)
-             VALUES ($1, $2, $3)
+            `INSERT INTO offers (from_shop, items, requested_discount, payment_method)
+             VALUES ($1, $2, $3, $4)
                  RETURNING *`,
             [
                 from_shop,
                 JSON.stringify(items),
-                requested_discount ? JSON.stringify(requested_discount) : null
+                requested_discount ? JSON.stringify(requested_discount) : null,
+                payment_method || null
             ]
         );
 
