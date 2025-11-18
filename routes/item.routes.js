@@ -2,6 +2,8 @@ const express = require('express');
 const router = express.Router();
 const { authenticateToken, authorizeRoles } = require('../middleware/authMiddleware');
 const pool = require('../db');
+const upload = require('../middleware/uploadMiddleware');
+const supabase = require('../config/supabase');
 
 /**
  * @swagger
@@ -42,7 +44,7 @@ const pool = require('../db');
 
 
 // 🔐 POST /api/items/add (admin only)
-router.post('/add', authenticateToken, authorizeRoles('admin'), async (req, res) => {
+router.post('/add', authenticateToken, authorizeRoles('admin'), upload.single('image'), async (req, res) => {
     const { name, description, price, image_url } = req.body;
 
     if (!name || !price) {
@@ -50,9 +52,38 @@ router.post('/add', authenticateToken, authorizeRoles('admin'), async (req, res)
     }
 
     try {
+        let finalImageUrl = image_url || null;
+
+        // If a file was uploaded, upload it to Supabase Storage
+        if (req.file) {
+            const fileExt = req.file.originalname.split('.').pop();
+            const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
+            const filePath = `items/${fileName}`;
+
+            // Upload to Supabase Storage
+            const { data, error } = await supabase.storage
+                .from('product-images')
+                .upload(filePath, req.file.buffer, {
+                    contentType: req.file.mimetype,
+                    cacheControl: '3600'
+                });
+
+            if (error) {
+                console.error('Supabase upload error:', error);
+                return res.status(500).json({ message: 'Failed to upload image', error: error.message });
+            }
+
+            // Get public URL
+            const { data: urlData } = supabase.storage
+                .from('product-images')
+                .getPublicUrl(filePath);
+
+            finalImageUrl = urlData.publicUrl;
+        }
+
         const result = await pool.query(
             'INSERT INTO items (name, description, price, image_url) VALUES ($1, $2, $3, $4) RETURNING *',
-            [name, description || '', price, image_url || null]
+            [name, description || '', price, finalImageUrl]
         );
         res.status(201).json({ item: result.rows[0] });
     } catch (error) {
@@ -91,7 +122,7 @@ router.get('/', authenticateToken, authorizeRoles('admin', 'cashier'), async (re
 });
 
 // 📝 PUT /api/items/:id (admin only)
-router.put('/:id', authenticateToken, authorizeRoles('admin'), async (req, res) => {
+router.put('/:id', authenticateToken, authorizeRoles('admin'), upload.single('image'), async (req, res) => {
     const { id } = req.params;
     const { name, description, price, quantity, image_url } = req.body;
 
@@ -116,7 +147,34 @@ router.put('/:id', authenticateToken, authorizeRoles('admin'), async (req, res) 
             updates.push(`quantity = $${paramCount++}`);
             values.push(quantity);
         }
-        if (image_url !== undefined) {
+
+        // Handle file upload if present
+        if (req.file) {
+            const fileExt = req.file.originalname.split('.').pop();
+            const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
+            const filePath = `items/${fileName}`;
+
+            // Upload to Supabase Storage
+            const { data, error } = await supabase.storage
+                .from('product-images')
+                .upload(filePath, req.file.buffer, {
+                    contentType: req.file.mimetype,
+                    cacheControl: '3600'
+                });
+
+            if (error) {
+                console.error('Supabase upload error:', error);
+                return res.status(500).json({ message: 'Failed to upload image', error: error.message });
+            }
+
+            // Get public URL
+            const { data: urlData } = supabase.storage
+                .from('product-images')
+                .getPublicUrl(filePath);
+
+            updates.push(`image_url = $${paramCount++}`);
+            values.push(urlData.publicUrl);
+        } else if (image_url !== undefined) {
             updates.push(`image_url = $${paramCount++}`);
             values.push(image_url);
         }
