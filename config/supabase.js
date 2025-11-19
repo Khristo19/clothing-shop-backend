@@ -19,12 +19,14 @@ const getSupabaseUrl = () => {
 };
 
 const supabaseUrl = getSupabaseUrl();
-const supabaseAnonKey = process.env.SUPABASE_ANON_KEY;
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
-if (!supabaseAnonKey) {
-    throw new Error('SUPABASE_ANON_KEY is required in environment variables');
+if (!supabaseServiceKey) {
+    throw new Error('SUPABASE_SERVICE_ROLE_KEY is required in environment variables');
 }
 
-const supabase = createClient(supabaseUrl, supabaseAnonKey);
+// Use service role key for backend operations - bypasses RLS, safe because
+// routes already verify JWT + admin role via authorizeRoles middleware
+const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
 module.exports = supabase;
