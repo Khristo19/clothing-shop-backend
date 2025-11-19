@@ -18,11 +18,23 @@ const authenticateToken = (req, res, next) => {
 };
 
 // ✅ Role check (admin, cashier, etc.)
+// Admin users can access all routes (including cashier routes)
 const authorizeRoles = (...allowedRoles) => {
     return (req, res, next) => {
-        if (!req.user || !allowedRoles.includes(req.user.role)) {
+        if (!req.user) {
             return res.status(403).json({ message: 'Forbidden: insufficient permissions' });
         }
+
+        // Admin can access everything
+        if (req.user.role === 'admin') {
+            return next();
+        }
+
+        // Otherwise, check if user's role is in allowed roles
+        if (!allowedRoles.includes(req.user.role)) {
+            return res.status(403).json({ message: 'Forbidden: insufficient permissions' });
+        }
+
         next();
     };
 };

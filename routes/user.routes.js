@@ -23,7 +23,7 @@ const bcrypt = require('bcryptjs');
 router.get('/', authenticateToken, authorizeRoles('admin'), async (req, res) => {
     try {
         const result = await pool.query(
-            'SELECT id, email, role, created_at FROM users ORDER BY created_at DESC'
+            'SELECT id, email, role, name, surname, created_at FROM users ORDER BY created_at DESC'
         );
         res.json(result.rows);
     } catch (error) {
@@ -69,7 +69,7 @@ router.get('/', authenticateToken, authorizeRoles('admin'), async (req, res) => 
 
 // ➕ POST /api/users - Create new user (admin only)
 router.post('/', authenticateToken, authorizeRoles('admin'), async (req, res) => {
-    const { email, password, role } = req.body;
+    const { email, password, role, name, surname } = req.body;
 
     if (!email || !password || !role) {
         return res.status(400).json({ message: 'Email, password, and role are required' });
@@ -91,8 +91,8 @@ router.post('/', authenticateToken, authorizeRoles('admin'), async (req, res) =>
 
         // Create user
         const result = await pool.query(
-            'INSERT INTO users (email, password, role) VALUES ($1, $2, $3) RETURNING id, email, role, created_at',
-            [email, hashedPassword, role]
+            'INSERT INTO users (email, password, role, name, surname) VALUES ($1, $2, $3, $4, $5) RETURNING id, email, role, name, surname, created_at',
+            [email, hashedPassword, role, name || null, surname || null]
         );
 
         res.status(201).json(result.rows[0]);
@@ -138,7 +138,7 @@ router.post('/', authenticateToken, authorizeRoles('admin'), async (req, res) =>
 // 📝 PUT /api/users/:id - Update user (admin only)
 router.put('/:id', authenticateToken, authorizeRoles('admin'), async (req, res) => {
     const { id } = req.params;
-    const { email, role } = req.body;
+    const { email, role, name, surname } = req.body;
 
     try {
         const updates = [];
@@ -156,13 +156,21 @@ router.put('/:id', authenticateToken, authorizeRoles('admin'), async (req, res) 
             updates.push(`role = $${paramCount++}`);
             values.push(role);
         }
+        if (name !== undefined) {
+            updates.push(`name = $${paramCount++}`);
+            values.push(name);
+        }
+        if (surname !== undefined) {
+            updates.push(`surname = $${paramCount++}`);
+            values.push(surname);
+        }
 
         if (updates.length === 0) {
             return res.status(400).json({ message: 'No fields to update' });
         }
 
         values.push(id);
-        const query = `UPDATE users SET ${updates.join(', ')} WHERE id = $${paramCount} RETURNING id, email, role, created_at`;
+        const query = `UPDATE users SET ${updates.join(', ')} WHERE id = $${paramCount} RETURNING id, email, role, name, surname, created_at`;
 
         const result = await pool.query(query, values);
 

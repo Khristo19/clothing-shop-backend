@@ -3,9 +3,9 @@ const jwt = require('jsonwebtoken');
 const pool = require('../db');
 
 const registerUser = async (req, res) => {
-    const { email, password, role } = req.body;
+    const { email, password, role, name, surname } = req.body;
 
-    console.log('📥 Incoming registration:', { email, role });
+    console.log('📥 Incoming registration:', { email, role, name, surname });
 
     if (!email || !password || !role) {
         console.warn('⚠️ Missing input fields:', { email, password, role });
@@ -26,8 +26,8 @@ const registerUser = async (req, res) => {
 
         console.log('📦 Inserting user into DB...');
         const newUser = await pool.query(
-            'INSERT INTO users (email, password, role) VALUES ($1, $2, $3) RETURNING id, email, role',
-            [email, hashedPassword, role]
+            'INSERT INTO users (email, password, role, name, surname) VALUES ($1, $2, $3, $4, $5) RETURNING id, email, role, name, surname',
+            [email, hashedPassword, role, name || null, surname || null]
         );
 
         console.log('✅ User successfully registered:', newUser.rows[0]);
@@ -65,7 +65,7 @@ const loginUser = async (req, res) => {
         );
 
         console.log('✅ Login successful for:', email);
-        res.json({ token, user: { id: user.id, email: user.email, role: user.role } });
+        res.json({ token, user: { id: user.id, email: user.email, role: user.role, name: user.name, surname: user.surname } });
     } catch (error) {
         console.error('❌ Login error:', error.message, '\nStack:', error.stack);
         res.status(500).json({ message: 'Server error during login' });
