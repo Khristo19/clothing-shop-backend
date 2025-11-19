@@ -45,7 +45,7 @@ const supabase = require('../config/supabase');
 
 // 🔐 POST /api/items/add (admin only)
 router.post('/add', authenticateToken, authorizeRoles('admin'), upload.single('image'), async (req, res) => {
-    const { name, description, price, image_url } = req.body;
+    const { name, description, price, quantity, image_url } = req.body;
 
     if (!name || !price) {
         return res.status(400).json({ message: 'Name and price are required' });
@@ -82,8 +82,8 @@ router.post('/add', authenticateToken, authorizeRoles('admin'), upload.single('i
         }
 
         const result = await pool.query(
-            'INSERT INTO items (name, description, price, image_url) VALUES ($1, $2, $3, $4) RETURNING *',
-            [name, description || '', price, finalImageUrl]
+            'INSERT INTO items (name, description, price, quantity, image_url) VALUES ($1, $2, $3, $4, $5) RETURNING *',
+            [name, description || '', price, quantity || 0, finalImageUrl]
         );
         res.status(201).json({ item: result.rows[0] });
     } catch (error) {
