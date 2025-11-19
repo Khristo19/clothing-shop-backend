@@ -45,7 +45,7 @@ const supabase = require('../config/supabase');
 
 // 🔐 POST /api/items/add (admin only)
 router.post('/add', authenticateToken, authorizeRoles('admin'), upload.single('image'), async (req, res) => {
-    const { name, description, price, quantity, image_url } = req.body;
+    const { name, description, price, quantity, size, image_url } = req.body;
 
     if (!name || !price) {
         return res.status(400).json({ message: 'Name and price are required' });
@@ -82,8 +82,8 @@ router.post('/add', authenticateToken, authorizeRoles('admin'), upload.single('i
         }
 
         const result = await pool.query(
-            'INSERT INTO items (name, description, price, quantity, image_url) VALUES ($1, $2, $3, $4, $5) RETURNING *',
-            [name, description || '', price, quantity || 0, finalImageUrl]
+            'INSERT INTO items (name, description, price, quantity, size, image_url) VALUES ($1, $2, $3, $4, $5, $6) RETURNING *',
+            [name, description || '', price, quantity || 0, size || null, finalImageUrl]
         );
         res.status(201).json({ item: result.rows[0] });
     } catch (error) {
@@ -124,7 +124,7 @@ router.get('/', authenticateToken, authorizeRoles('admin', 'cashier'), async (re
 // 📝 PUT /api/items/:id (admin only)
 router.put('/:id', authenticateToken, authorizeRoles('admin'), upload.single('image'), async (req, res) => {
     const { id } = req.params;
-    const { name, description, price, quantity, image_url } = req.body;
+    const { name, description, price, quantity, size, image_url } = req.body;
 
     try {
         const updates = [];
@@ -146,6 +146,10 @@ router.put('/:id', authenticateToken, authorizeRoles('admin'), upload.single('im
         if (quantity !== undefined) {
             updates.push(`quantity = $${paramCount++}`);
             values.push(quantity);
+        }
+        if (size !== undefined) {
+            updates.push(`size = $${paramCount++}`);
+            values.push(size);
         }
 
         // Handle file upload if present
