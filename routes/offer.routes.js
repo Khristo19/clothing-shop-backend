@@ -60,14 +60,15 @@ router.post('/', authenticateToken, authorizeRoles('cashier', 'admin'), async (r
 
     try {
         const result = await pool.query(
-            `INSERT INTO offers (from_shop, items, requested_discount, payment_method)
-             VALUES ($1, $2, $3, $4)
+            `INSERT INTO offers (from_shop, items, requested_discount, payment_method, cashier_id)
+             VALUES ($1, $2, $3, $4, $5)
                  RETURNING *`,
             [
                 from_shop,
                 JSON.stringify(items),
                 requested_discount ? JSON.stringify(requested_discount) : null,
-                payment_method || null
+                payment_method || null,
+                req.user.id // Automatically save the logged-in user's ID
             ]
         );
 
@@ -98,7 +99,14 @@ router.post('/', authenticateToken, authorizeRoles('cashier', 'admin'), async (r
 router.get('/', authenticateToken, authorizeRoles('admin', 'cashier'), async (req, res) => {
     try {
         const result = await pool.query(
-            `SELECT * FROM offers ORDER BY created_at DESC`
+            `SELECT
+                offers.*,
+                users.name AS cashier_name,
+                users.surname AS cashier_surname,
+                users.email AS cashier_email
+             FROM offers
+             LEFT JOIN users ON offers.cashier_id = users.id
+             ORDER BY offers.created_at DESC`
         );
         res.json(result.rows);
     } catch (err) {
