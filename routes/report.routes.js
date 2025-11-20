@@ -19,6 +19,10 @@ const pool = require('../db');
 // 📊 GET /api/reports/dashboard - Dashboard statistics
 router.get('/dashboard', authenticateToken, authorizeRoles('admin'), async (req, res) => {
     try {
+        // Get low stock threshold from settings
+        const settingsResult = await pool.query('SELECT low_stock_threshold FROM settings ORDER BY id DESC LIMIT 1');
+        const threshold = settingsResult.rows.length > 0 ? settingsResult.rows[0].low_stock_threshold : 5;
+
         // Today's sales
         const todaySales = await pool.query(`
             SELECT
@@ -46,14 +50,14 @@ router.get('/dashboard', authenticateToken, authorizeRoles('admin'), async (req,
             WHERE created_at >= DATE_TRUNC('month', CURRENT_DATE)
         `);
 
-        // Low stock items (quantity < 10)
+        // Low stock items (quantity < threshold)
         const lowStock = await pool.query(`
             SELECT id, name, quantity, price
             FROM items
-            WHERE quantity < 10 AND quantity > 0
+            WHERE quantity < $1 AND quantity > 0
             ORDER BY quantity ASC
             LIMIT 10
-        `);
+        `, [threshold]);
 
         // Out of stock items
         const outOfStock = await pool.query(`

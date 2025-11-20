@@ -98,6 +98,12 @@ router.post('/add', authenticateToken, authorizeRoles('admin'), upload.single('i
  *   get:
  *     summary: Get all items
  *     tags: [Items]
+ *     parameters:
+ *       - in: query
+ *         name: lowStock
+ *         schema:
+ *           type: boolean
+ *         description: Filter items with low stock (based on settings threshold)
  *     responses:
  *       200:
  *         description: List of all items
@@ -113,6 +119,22 @@ router.post('/add', authenticateToken, authorizeRoles('admin'), upload.single('i
 // 📦 GET /api/items (admin + cashier)
 router.get('/', authenticateToken, authorizeRoles('admin', 'cashier'), async (req, res) => {
     try {
+        const { lowStock } = req.query;
+
+        if (lowStock === 'true') {
+            // Get low stock threshold from settings
+            const settingsResult = await pool.query('SELECT low_stock_threshold FROM settings ORDER BY id DESC LIMIT 1');
+            const threshold = settingsResult.rows.length > 0 ? settingsResult.rows[0].low_stock_threshold : 5;
+
+            // Return only low stock items
+            const result = await pool.query(
+                'SELECT * FROM items WHERE quantity < $1 AND quantity > 0 ORDER BY quantity ASC',
+                [threshold]
+            );
+            return res.json(result.rows);
+        }
+
+        // Return all items
         const result = await pool.query('SELECT * FROM items ORDER BY created_at DESC');
         res.json(result.rows);
     } catch (error) {
