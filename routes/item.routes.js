@@ -45,7 +45,7 @@ const supabase = require('../config/supabase');
 
 // 🔐 POST /api/items/add (admin only)
 router.post('/add', authenticateToken, authorizeRoles('admin'), upload.single('image'), async (req, res) => {
-    const { name, description, price, quantity, size, image_url } = req.body;
+    const { name, description, price, quantity, size, image_url, location_id } = req.body;
 
     if (!name || !price) {
         return res.status(400).json({ message: 'Name and price are required' });
@@ -82,8 +82,8 @@ router.post('/add', authenticateToken, authorizeRoles('admin'), upload.single('i
         }
 
         const result = await pool.query(
-            'INSERT INTO items (name, description, price, quantity, size, image_url) VALUES ($1, $2, $3, $4, $5, $6) RETURNING *',
-            [name, description || '', price, quantity || 0, size || null, finalImageUrl]
+            'INSERT INTO items (name, description, price, quantity, size, image_url, location_id) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *',
+            [name, description || '', price, quantity || 0, size || null, finalImageUrl, location_id || null]
         );
         res.status(201).json({ item: result.rows[0] });
     } catch (error) {
@@ -126,16 +126,25 @@ router.get('/', authenticateToken, authorizeRoles('admin', 'cashier'), async (re
             const settingsResult = await pool.query('SELECT low_stock_threshold FROM settings ORDER BY id DESC LIMIT 1');
             const threshold = settingsResult.rows.length > 0 ? settingsResult.rows[0].low_stock_threshold : 5;
 
-            // Return only low stock items
+            // Return only low stock items with location info
             const result = await pool.query(
-                'SELECT * FROM items WHERE quantity < $1 AND quantity > 0 ORDER BY quantity ASC',
+                `SELECT items.*, locations.name AS location_name
+                 FROM items
+                 LEFT JOIN locations ON items.location_id = locations.id
+                 WHERE quantity < $1 AND quantity > 0
+                 ORDER BY quantity ASC`,
                 [threshold]
             );
             return res.json(result.rows);
         }
 
-        // Return all items
-        const result = await pool.query('SELECT * FROM items ORDER BY created_at DESC');
+        // Return all items with location info
+        const result = await pool.query(
+            `SELECT items.*, locations.name AS location_name
+             FROM items
+             LEFT JOIN locations ON items.location_id = locations.id
+             ORDER BY created_at DESC`
+        );
         res.json(result.rows);
     } catch (error) {
         console.error('Fetch items error:', error);
@@ -146,7 +155,7 @@ router.get('/', authenticateToken, authorizeRoles('admin', 'cashier'), async (re
 // 📝 PUT /api/items/:id (admin only)
 router.put('/:id', authenticateToken, authorizeRoles('admin'), upload.single('image'), async (req, res) => {
     const { id } = req.params;
-    const { name, description, price, quantity, size, image_url } = req.body;
+    const { name, description, price, quantity, size, image_url, location_id } = req.body;
 
     try {
         const updates = [];
@@ -172,6 +181,10 @@ router.put('/:id', authenticateToken, authorizeRoles('admin'), upload.single('im
         if (size !== undefined) {
             updates.push(`size = $${paramCount++}`);
             values.push(size);
+        }
+        if (location_id !== undefined) {
+            updates.push(`location_id = $${paramCount++}`);
+            values.push(location_id);
         }
 
         // Handle file upload if present

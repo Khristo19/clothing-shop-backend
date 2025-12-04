@@ -34,6 +34,32 @@ router.get('/', authenticateToken, authorizeRoles('admin'), async (req, res) => 
 
 /**
  * @swagger
+ * /api/users/cashiers:
+ *   get:
+ *     summary: Get all users for cashier selection (admin + cashier)
+ *     tags: [Users]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: List of all users for selection
+ */
+
+// 👥 GET /api/users/cashiers - Get all users for cashier selection
+router.get('/cashiers', authenticateToken, authorizeRoles('admin', 'cashier'), async (req, res) => {
+    try {
+        const result = await pool.query(
+            'SELECT id, email, role, name, surname FROM users ORDER BY name, surname, email'
+        );
+        res.json(result.rows);
+    } catch (error) {
+        console.error('Fetch cashiers error:', error);
+        res.status(500).json({ message: 'Failed to fetch users' });
+    }
+});
+
+/**
+ * @swagger
  * /api/users:
  *   post:
  *     summary: Create a new user (admin only)

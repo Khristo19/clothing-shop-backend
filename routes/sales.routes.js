@@ -20,6 +20,8 @@ const pool = require('../db');
  *             required:
  *               - items
  *               - payment_method
+ *               - location_id
+ *               - served_by_cashier_id
  *             properties:
  *               items:
  *                 type: array
@@ -34,6 +36,15 @@ const pool = require('../db');
  *               payment_method:
  *                 type: string
  *                 enum: [cash, BOG, TBC]
+ *               location_id:
+ *                 type: integer
+ *                 description: Store location ID
+ *               served_by_cashier_id:
+ *                 type: integer
+ *                 description: Cashier who served this sale
+ *               partner_cashier_id:
+ *                 type: integer
+ *                 description: Optional partner cashier
  *     responses:
  *       201:
  *         description: Sale created
@@ -44,7 +55,7 @@ const pool = require('../db');
 
 // 💾 POST /api/sales
 router.post('/', authenticateToken, authorizeRoles('cashier', 'admin'), async (req, res) => {
-    const { items, total, payment_method, payment_bank } = req.body;
+    const { items, total, payment_method, payment_bank, location_id, served_by_cashier_id, partner_cashier_id } = req.body;
     const cashier_id = req.user.id;
 
     if (!items || !Array.isArray(items) || items.length === 0) {
@@ -52,6 +63,9 @@ router.post('/', authenticateToken, authorizeRoles('cashier', 'admin'), async (r
     }
     if (!total || !payment_method) {
         return res.status(400).json({ message: 'Total and payment method are required' });
+    }
+    if (!location_id || !served_by_cashier_id) {
+        return res.status(400).json({ message: 'Location and served by cashier are required' });
     }
 
     const client = await pool.connect();
@@ -92,10 +106,10 @@ router.post('/', authenticateToken, authorizeRoles('cashier', 'admin'), async (r
 
         // Save sale
         const result = await client.query(
-            `INSERT INTO sales (cashier_id, items, total, payment_method, payment_bank)
-             VALUES ($1, $2, $3, $4, $5)
+            `INSERT INTO sales (cashier_id, items, total, payment_method, payment_bank, location_id, served_by_cashier_id, partner_cashier_id)
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
              RETURNING *`,
-            [cashier_id, JSON.stringify(items), total, payment_method, payment_bank || null]
+            [cashier_id, JSON.stringify(items), total, payment_method, payment_bank || null, location_id, served_by_cashier_id, partner_cashier_id || null]
         );
 
         await client.query('COMMIT');
@@ -113,7 +127,7 @@ router.post('/', authenticateToken, authorizeRoles('cashier', 'admin'), async (r
  * @swagger
  * /api/sales:
  *   get:
- *     summary: Get sales (filterable by date, method, cashier)
+ *     summary: Get sales (filterable by date, method, cashier, location)
  *     tags: [Sales]
  *     security:
  *       - bearerAuth: []
@@ -143,6 +157,21 @@ router.post('/', authenticateToken, authorizeRoles('cashier', 'admin'), async (r
  *         schema:
  *           type: integer
  *         required: false
+ *       - in: query
+ *         name: location_id
+ *         schema:
+ *           type: integer
+ *         required: false
+ *       - in: query
+ *         name: served_by_cashier_id
+ *         schema:
+ *           type: integer
+ *         required: false
+ *       - in: query
+ *         name: partner_cashier_id
+ *         schema:
+ *           type: integer
+ *         required: false
  *     responses:
  *       200:
  *         description: List of sales
@@ -153,12 +182,26 @@ router.post('/', authenticateToken, authorizeRoles('cashier', 'admin'), async (r
 
 // 📊 GET /api/sales with filters
 router.get('/', authenticateToken, authorizeRoles('admin', 'cashier'), async (req, res) => {
-    const { payment_method, cashier_id, from, to } = req.query;
+    const { payment_method, cashier_id, from, to, location_id, served_by_cashier_id, partner_cashier_id } = req.query;
 
     let query = `
-    SELECT sales.*, users.email AS cashier_email
+    SELECT
+        sales.*,
+        u1.email AS cashier_email,
+        u1.name AS cashier_name,
+        u1.surname AS cashier_surname,
+        u2.email AS served_by_email,
+        u2.name AS served_by_name,
+        u2.surname AS served_by_surname,
+        u3.email AS partner_email,
+        u3.name AS partner_name,
+        u3.surname AS partner_surname,
+        locations.name AS location_name
     FROM sales
-    JOIN users ON sales.cashier_id = users.id
+    JOIN users u1 ON sales.cashier_id = u1.id
+    JOIN users u2 ON sales.served_by_cashier_id = u2.id
+    LEFT JOIN users u3 ON sales.partner_cashier_id = u3.id
+    JOIN locations ON sales.location_id = locations.id
     WHERE 1=1
   `;
     const values = [];
@@ -171,6 +214,21 @@ router.get('/', authenticateToken, authorizeRoles('admin', 'cashier'), async (re
     if (cashier_id) {
         values.push(cashier_id);
         query += ` AND sales.cashier_id = $${values.length}`;
+    }
+
+    if (location_id) {
+        values.push(location_id);
+        query += ` AND sales.location_id = $${values.length}`;
+    }
+
+    if (served_by_cashier_id) {
+        values.push(served_by_cashier_id);
+        query += ` AND sales.served_by_cashier_id = $${values.length}`;
+    }
+
+    if (partner_cashier_id) {
+        values.push(partner_cashier_id);
+        query += ` AND sales.partner_cashier_id = $${values.length}`;
     }
 
     if (from) {
@@ -200,9 +258,23 @@ router.get('/:id', authenticateToken, authorizeRoles('admin', 'cashier'), async 
 
     try {
         const result = await pool.query(
-            `SELECT sales.*, users.email AS cashier_email
+            `SELECT
+                sales.*,
+                u1.email AS cashier_email,
+                u1.name AS cashier_name,
+                u1.surname AS cashier_surname,
+                u2.email AS served_by_email,
+                u2.name AS served_by_name,
+                u2.surname AS served_by_surname,
+                u3.email AS partner_email,
+                u3.name AS partner_name,
+                u3.surname AS partner_surname,
+                locations.name AS location_name
              FROM sales
-             JOIN users ON sales.cashier_id = users.id
+             JOIN users u1 ON sales.cashier_id = u1.id
+             JOIN users u2 ON sales.served_by_cashier_id = u2.id
+             LEFT JOIN users u3 ON sales.partner_cashier_id = u3.id
+             JOIN locations ON sales.location_id = locations.id
              WHERE sales.id = $1`,
             [id]
         );

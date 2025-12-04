@@ -29,7 +29,8 @@ router.get('/', authenticateToken, authorizeRoles('admin'), async (req, res) => 
                 currency: 'GEL',
                 receipt_header: 'Thank you for shopping with us!',
                 receipt_footer: 'Please come again',
-                low_stock_threshold: 5
+                low_stock_threshold: 5,
+                locations: []
             });
         }
 
@@ -68,6 +69,16 @@ router.get('/', authenticateToken, authorizeRoles('admin'), async (req, res) => 
  *               low_stock_threshold:
  *                 type: integer
  *                 description: Minimum quantity threshold for low stock alerts
+ *               locations:
+ *                 type: array
+ *                 description: Store locations array
+ *                 items:
+ *                   type: object
+ *                   properties:
+ *                     id:
+ *                       type: integer
+ *                     name:
+ *                       type: string
  *     responses:
  *       200:
  *         description: Settings updated
@@ -75,7 +86,7 @@ router.get('/', authenticateToken, authorizeRoles('admin'), async (req, res) => 
 
 // 📝 PUT /api/settings - Update settings
 router.put('/', authenticateToken, authorizeRoles('admin'), async (req, res) => {
-    const { shop_name, tax_rate, currency, receipt_header, receipt_footer, low_stock_threshold } = req.body;
+    const { shop_name, tax_rate, currency, receipt_header, receipt_footer, low_stock_threshold, locations } = req.body;
 
     try {
         // Check if settings exist
@@ -86,8 +97,8 @@ router.put('/', authenticateToken, authorizeRoles('admin'), async (req, res) => 
         if (existing.rows.length === 0) {
             // Insert new settings
             result = await pool.query(`
-                INSERT INTO settings (shop_name, tax_rate, currency, receipt_header, receipt_footer, low_stock_threshold)
-                VALUES ($1, $2, $3, $4, $5, $6)
+                INSERT INTO settings (shop_name, tax_rate, currency, receipt_header, receipt_footer, low_stock_threshold, locations)
+                VALUES ($1, $2, $3, $4, $5, $6, $7)
                 RETURNING *
             `, [
                 shop_name || 'Clothing Shop',
@@ -95,7 +106,8 @@ router.put('/', authenticateToken, authorizeRoles('admin'), async (req, res) => 
                 currency || 'GEL',
                 receipt_header || 'Thank you for shopping with us!',
                 receipt_footer || 'Please come again',
-                low_stock_threshold || 5
+                low_stock_threshold || 5,
+                JSON.stringify(locations || [])
             ]);
         } else {
             // Update existing settings
@@ -126,6 +138,10 @@ router.put('/', authenticateToken, authorizeRoles('admin'), async (req, res) => 
             if (low_stock_threshold !== undefined) {
                 updates.push(`low_stock_threshold = $${paramCount++}`);
                 values.push(low_stock_threshold);
+            }
+            if (locations !== undefined) {
+                updates.push(`locations = $${paramCount++}`);
+                values.push(JSON.stringify(locations));
             }
 
             if (updates.length === 0) {

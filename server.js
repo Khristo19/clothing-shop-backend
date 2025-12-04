@@ -75,6 +75,7 @@ const offerRoutes = require('./routes/offer.routes');
 const userRoutes = require('./routes/user.routes');
 const reportRoutes = require('./routes/report.routes');
 const settingsRoutes = require('./routes/settings.routes');
+const locationRoutes = require('./routes/location.routes');
 
 app.use('/api/auth', authRoutes);
 app.use('/api/items', itemRoutes);
@@ -83,6 +84,7 @@ app.use('/api/offers', offerRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/reports', reportRoutes);
 app.use('/api/settings', settingsRoutes);
+app.use('/api/locations', locationRoutes);
 
 // Start server
 const PORT = process.env.PORT || 4000;
