@@ -33,6 +33,9 @@ const supabase = require('../config/supabase');
  *                 type: string
  *               image_url:
  *                 type: string
+ *               initial_cost:
+ *                 type: number
+ *                 description: Cost price of the item (admin only)
  *     responses:
  *       201:
  *         description: Item added
@@ -45,7 +48,7 @@ const supabase = require('../config/supabase');
 
 // 🔐 POST /api/items/add (admin only)
 router.post('/add', authenticateToken, authorizeRoles('admin'), upload.single('image'), async (req, res) => {
-    const { name, description, price, quantity, size, image_url, location_id } = req.body;
+    const { name, description, price, quantity, size, image_url, location_id, initial_cost } = req.body;
 
     if (!name || !price) {
         return res.status(400).json({ message: 'Name and price are required' });
@@ -82,8 +85,8 @@ router.post('/add', authenticateToken, authorizeRoles('admin'), upload.single('i
         }
 
         const result = await pool.query(
-            'INSERT INTO items (name, description, price, quantity, size, image_url, location_id) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *',
-            [name, description || '', price, quantity || 0, size || null, finalImageUrl, location_id || null]
+            'INSERT INTO items (name, description, price, quantity, size, image_url, location_id, initial_cost) VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING *',
+            [name, description || '', price, quantity || 0, size || null, finalImageUrl, location_id || null, initial_cost || null]
         );
         res.status(201).json({ item: result.rows[0] });
     } catch (error) {
@@ -106,7 +109,7 @@ router.post('/add', authenticateToken, authorizeRoles('admin'), upload.single('i
  *         description: Filter items with low stock (based on settings threshold)
  *     responses:
  *       200:
- *         description: List of all items
+ *         description: List of all items (initial_cost hidden from cashiers)
  *         content:
  *           application/json:
  *             schema:
@@ -135,7 +138,16 @@ router.get('/', authenticateToken, authorizeRoles('admin', 'cashier'), async (re
                  ORDER BY quantity ASC`,
                 [threshold]
             );
-            return res.json(result.rows);
+
+            // Filter out initial_cost for cashiers
+            const items = req.user.role === 'cashier'
+                ? result.rows.map(item => {
+                    const { initial_cost, ...itemWithoutCost } = item;
+                    return itemWithoutCost;
+                })
+                : result.rows;
+
+            return res.json(items);
         }
 
         // Return all items with location info
@@ -145,7 +157,16 @@ router.get('/', authenticateToken, authorizeRoles('admin', 'cashier'), async (re
              LEFT JOIN locations ON items.location_id = locations.id
              ORDER BY created_at DESC`
         );
-        res.json(result.rows);
+
+        // Filter out initial_cost for cashiers
+        const items = req.user.role === 'cashier'
+            ? result.rows.map(item => {
+                const { initial_cost, ...itemWithoutCost } = item;
+                return itemWithoutCost;
+            })
+            : result.rows;
+
+        res.json(items);
     } catch (error) {
         console.error('Fetch items error:', error);
         res.status(500).json({ message: 'Failed to fetch items' });
@@ -155,7 +176,7 @@ router.get('/', authenticateToken, authorizeRoles('admin', 'cashier'), async (re
 // 📝 PUT /api/items/:id (admin only)
 router.put('/:id', authenticateToken, authorizeRoles('admin'), upload.single('image'), async (req, res) => {
     const { id } = req.params;
-    const { name, description, price, quantity, size, image_url, location_id } = req.body;
+    const { name, description, price, quantity, size, image_url, location_id, initial_cost } = req.body;
 
     try {
         const updates = [];
@@ -185,6 +206,10 @@ router.put('/:id', authenticateToken, authorizeRoles('admin'), upload.single('im
         if (location_id !== undefined) {
             updates.push(`location_id = $${paramCount++}`);
             values.push(location_id);
+        }
+        if (initial_cost !== undefined) {
+            updates.push(`initial_cost = $${paramCount++}`);
+            values.push(initial_cost);
         }
 
         // Handle file upload if present
