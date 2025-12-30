@@ -254,7 +254,7 @@ router.get('/top-products', authenticateToken, authorizeRoles('admin'), async (r
  * @swagger
  * /api/reports/cashier-performance:
  *   get:
- *     summary: Get cashier performance metrics
+ *     summary: Get user performance metrics (all registered users)
  *     tags: [Reports]
  *     security:
  *       - bearerAuth: []
@@ -271,10 +271,10 @@ router.get('/top-products', authenticateToken, authorizeRoles('admin'), async (r
  *         required: true
  *     responses:
  *       200:
- *         description: Cashier performance data
+ *         description: User performance data including admins and cashiers
  */
 
-// 👤 GET /api/reports/cashier-performance - Cashier performance
+// 👤 GET /api/reports/cashier-performance - User performance (all registered users)
 router.get('/cashier-performance', authenticateToken, authorizeRoles('admin'), async (req, res) => {
     const { from, to } = req.query;
 
@@ -297,15 +297,14 @@ router.get('/cashier-performance', authenticateToken, authorizeRoles('admin'), a
             LEFT JOIN sales ON users.id = sales.cashier_id
                 AND sales.created_at >= $1
                 AND sales.created_at <= $2
-            WHERE users.role = 'cashier'
             GROUP BY users.id, users.email, users.role
             ORDER BY total_revenue DESC
         `, [from, to]);
 
         res.json(result.rows);
     } catch (error) {
-        console.error('Cashier performance error:', error);
-        res.status(500).json({ message: 'Failed to fetch cashier performance' });
+        console.error('User performance error:', error);
+        res.status(500).json({ message: 'Failed to fetch user performance' });
     }
 });
 
