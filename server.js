@@ -67,6 +67,25 @@ if (process.env.NODE_ENV !== 'production') {
     app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 }
 
+// ✅ Root route for health check
+app.get('/', (req, res) => {
+    res.json({
+        status: 'ok',
+        message: 'Clothing Shop API is running',
+        version: '1.0.0',
+        endpoints: {
+            auth: '/api/auth',
+            items: '/api/items',
+            sales: '/api/sales',
+            offers: '/api/offers',
+            users: '/api/users',
+            reports: '/api/reports',
+            settings: '/api/settings',
+            locations: '/api/locations'
+        }
+    });
+});
+
 // ✅ Now define routes AFTER Swagger is set
 const authRoutes = require('./routes/auth.routes');
 const itemRoutes = require('./routes/item.routes');
