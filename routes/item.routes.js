@@ -3,7 +3,7 @@ const router = express.Router();
 const { authenticateToken, authorizeRoles } = require('../middleware/authMiddleware');
 const pool = require('../db');
 const upload = require('../middleware/uploadMiddleware');
-const supabase = require('../config/supabase');
+const { uploadToR2 } = require('../utils/r2Upload');
 
 /**
  * @swagger
@@ -57,31 +57,13 @@ router.post('/add', authenticateToken, authorizeRoles('admin'), upload.single('i
     try {
         let finalImageUrl = image_url || null;
 
-        // If a file was uploaded, upload it to Supabase Storage
+        // If a file was uploaded, upload it to Cloudflare R2
         if (req.file) {
             const fileExt = req.file.originalname.split('.').pop();
             const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
-            const filePath = `items/${fileName}`;
 
-            // Upload to Supabase Storage
-            const { data, error } = await supabase.storage
-                .from('product-images')
-                .upload(filePath, req.file.buffer, {
-                    contentType: req.file.mimetype,
-                    cacheControl: '3600'
-                });
-
-            if (error) {
-                console.error('Supabase upload error:', error);
-                return res.status(500).json({ message: 'Failed to upload image', error: error.message });
-            }
-
-            // Get public URL
-            const { data: urlData } = supabase.storage
-                .from('product-images')
-                .getPublicUrl(filePath);
-
-            finalImageUrl = urlData.publicUrl;
+            // Upload to R2
+            finalImageUrl = await uploadToR2(req.file.buffer, fileName, req.file.mimetype);
         }
 
         const result = await pool.query(
@@ -216,28 +198,12 @@ router.put('/:id', authenticateToken, authorizeRoles('admin'), upload.single('im
         if (req.file) {
             const fileExt = req.file.originalname.split('.').pop();
             const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
-            const filePath = `items/${fileName}`;
 
-            // Upload to Supabase Storage
-            const { data, error } = await supabase.storage
-                .from('product-images')
-                .upload(filePath, req.file.buffer, {
-                    contentType: req.file.mimetype,
-                    cacheControl: '3600'
-                });
-
-            if (error) {
-                console.error('Supabase upload error:', error);
-                return res.status(500).json({ message: 'Failed to upload image', error: error.message });
-            }
-
-            // Get public URL
-            const { data: urlData } = supabase.storage
-                .from('product-images')
-                .getPublicUrl(filePath);
+            // Upload to R2
+            const imageUrl = await uploadToR2(req.file.buffer, fileName, req.file.mimetype);
 
             updates.push(`image_url = $${paramCount++}`);
-            values.push(urlData.publicUrl);
+            values.push(imageUrl);
         } else if (image_url !== undefined) {
             updates.push(`image_url = $${paramCount++}`);
             values.push(image_url);
